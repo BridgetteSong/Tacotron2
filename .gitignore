@@ -1,0 +1,7 @@
+checkpoints*
+q
+__pycache__
+*.log
+*.pcm
+*.wav
+model_outputs
