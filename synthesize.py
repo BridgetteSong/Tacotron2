@@ -33,24 +33,6 @@ def synthesis_text(model, input_text, spkid):
     return mel_outputs_postnet
 
 
-def gen_lpcnet(mel_output, output_dir, filename):
-    mel_output = mel_output.squeeze(0).data.cpu().numpy().T
-    lpc_features = np.zeros((mel_output.shape[0], 55), dtype=np.float32)
-    lpc_features[:, :18] = mel_output[:, :18]
-    lpc_features[:, 36:38] = mel_output[:, 18:]
-    lpc_features.tofile('test.f32')
-
-    print("writing audio...")
-    lpcnet_start_time = time.time()
-    os.system("/ssd4/exec/yins/work/vocoders/LPCNet_Bunched_V2/lpcnet_demo -synthesis test.f32 out.pcm")
-    lpcnet_end_time = time.time()
-    print("LPCNet RTF :", np.round((lpcnet_end_time - lpcnet_start_time) * 100 / mel_output.shape[0], 4))
-    wav = np.fromfile("out.pcm", dtype=np.int16)
-    sf.write(os.path.join(output_dir, filename + "_lpc.wav"), wav, 16000, "PCM_16")
-    os.system("rm out.pcm")
-    os.system("rm test.f32")
-
-
 def gen_mel(mel_output, output_dir, filename, vocoder):
     if vocoder == "gl":
         wav = reconstruct_waveform(mel_output.contiguous().view(hp.n_mel_channels, mel_output.size(-1)), compression=hp.compression)
@@ -92,22 +74,13 @@ if __name__ == "__main__" :
                 tstime = time.time()
                 mel_output = synthesis_text(model, input_text, spkid=0)
                 tetime = time.time()
-                if hp.mel_type in ["lpcnet", "lpc"]:
-                    print("tacotron rtf: ", np.round((tetime - tstime) * 160 / mel_output.shape[-1], 4))
-                    gen_lpcnet(mel_output=mel_output, output_dir=args.output, filename=name)
-                else:
-                    print("tacotron rtf: ", np.round((tetime - tstime) * hp.sampling_rate / (hp.hop_length * mel_output.shape[-1]), 4))
-                    gen_mel(mel_output=mel_output, output_dir=args.output, filename=name, vocoder=args.vocoder)
+                print("tacotron rtf: ", np.round((tetime - tstime) * hp.sampling_rate / (hp.hop_length * mel_output.shape[-1]), 4))
+                gen_mel(mel_output=mel_output, output_dir=args.output, filename=name, vocoder=args.vocoder)
 
     else:
         tstime = time.time()
         mel_output = synthesis_text(model, args.input_text, spkid=0)
-        tetime = time.time()
-        print("tacotron cost time: ", np.round(tetime - tstime, 4))
-        if hp.mel_type in ["lpcnet", "lpc"]:
-            print("tacotron rtf: ", np.round((tetime - tstime)* 160 / mel_output.shape[-1], 4))
-            gen_lpcnet(mel_output=mel_output, output_dir="", filename=args.name)
-        else:
-            print("tacotron rtf: ", np.round((tetime - tstime) * hp.sampling_rate / (hp.hop_length * mel_output.shape[-1]), 4))
-            gen_mel(mel_output=mel_output, output_dir="", filename=args.name, vocoder=args.vocoder)
+        tetime = time.time()    
+        print("tacotron rtf: ", np.round((tetime - tstime) * hp.sampling_rate / (hp.hop_length * mel_output.shape[-1]), 4))
+        gen_mel(mel_output=mel_output, output_dir="", filename=args.name, vocoder=args.vocoder)
     print('Done.\n')

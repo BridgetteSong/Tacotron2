@@ -31,25 +31,13 @@ def get_tts_dataset(force_gta):
             phone_files[name[4:] + ".npy"] = np.stack((np.array(token_index), np.array(tones)), axis=0) if hp.split_tone else np.array(token_index)
 
 
-    mel_files = {}
-    if hp.pre_mel:
-        print("loading mels from disk")
-        for features in os.listdir(hp.mels_path):
-            if features[-10:-4] == "-feats":
-                # from parallel wavegan
-                mel_files[features[:-10] + ".npy"] = features
-            else:
-                mel_files[features] = features
-
     wav_files = set([wav[:-4] + ".npy" for wav in os.listdir(hp.wav_path) if wav[-4:] == ".wav"])
     dataset_ids = []
     for ids in phone_files.keys():
-        if hp.pre_mel and ids in mel_files:
-            dataset_ids.append(ids)
-        elif not hp.pre_mel and ids in wav_files:
+        if ids in wav_files:
             dataset_ids.append(ids)
 
-    train_dataset = TTSDataset(dataset_ids, phone_files, mel_files)
+    train_dataset = TTSDataset(dataset_ids, phone_files)
 
     sampler = DistributedSampler(train_dataset) if not force_gta and hp.distributed_run else None
     shuffle = False if not force_gta and hp.distributed_run else True
@@ -66,9 +54,8 @@ def get_tts_dataset(force_gta):
 
 
 class TTSDataset(Dataset):
-    def __init__(self, dataset_ids, phone_files, mel_files):
+    def __init__(self, dataset_ids, phone_files):
         self.phone_files = phone_files
-        self.mel_files = mel_files
         self.metadata = dataset_ids
         self.spk_ids = hp.spk_ids
         print("len(dataset) {}".format(len(dataset_ids)))
@@ -78,19 +65,14 @@ class TTSDataset(Dataset):
     def __getitem__(self, index):
         idx = self.metadata[index]
         phones = np.load(os.path.join(self.phone_path, idx)) if len(self.phone_files) == 0 else self.phone_files[idx]
-        if hp.pre_mel and len(self.mel_files) > 0:
-            mel = np.load(os.path.join(self.mel_path, self.mel_files[idx]))
-            if hp.n_mel_channels == mel.shape[1] and mel.shape[0] != hp.n_mel_channels: mel = mel.T
-        else:
-            assert hp.n_mel_channels == 80
-            audio, sampling_rate = load_wav(os.path.join(hp.wav_path, idx[:-4] + ".wav"))
-            if sampling_rate != hp.sampling_rate:
-                raise ValueError("{} SR doesn't match target {} SR".format(sampling_rate, hp.sampling_rate))
-            audio = audio / hp.max_wav_value
-            audio = torch.tensor(audio, dtype=torch.float32).unsqueeze(0)
-            mel = mel_spectrogram_torch(audio, hp.filter_length, hp.n_mel_channels, hp.sampling_rate,
-                                        hp.hop_length, hp.win_length, hp.mel_fmin, hp.mel_fmax, compression=hp.compression)
-            mel = mel.squeeze(0).numpy()
+        audio, sampling_rate = load_wav(os.path.join(hp.wav_path, idx[:-4] + ".wav"))
+        if sampling_rate != hp.sampling_rate:
+            raise ValueError("{} SR doesn't match target {} SR".format(sampling_rate, hp.sampling_rate))
+        audio = audio / hp.max_wav_value
+        audio = torch.tensor(audio, dtype=torch.float32).unsqueeze(0)
+        mel = mel_spectrogram_torch(audio, hp.filter_length, hp.n_mel_channels, hp.sampling_rate,
+                                    hp.hop_length, hp.win_length, hp.mel_fmin, hp.mel_fmax, compression=hp.compression)
+        mel = mel.squeeze(0).numpy()
 
         speaker_id = self.spk_ids[idx[:2]] if idx[:2] in self.spk_ids else len(self.spk_ids) - 1
         assert mel.shape[0] == hp.n_mel_channels

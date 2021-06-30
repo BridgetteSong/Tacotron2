@@ -5,19 +5,13 @@ import os
 # CONFIG -----------------------------------------------------------------------------------------------------------#
 
 # File Path
-wav_path = "/aistore/asr/exec/yins/data/DB-4/all_16k"
-text_dict_path = "/ssd3/exec/yins/data/english_data/text_dicts_path/ljspeech_dict_text.pkl"
+wav_path = "wavs/all_16k"
+text_dict_path = "dict_text.pkl"
 
-# Settings for all models
-mel_type = ["lpc", "mel"][1]
-pre_mel = False
 
 # Setting Saving path
-phones_path = "/ssd3/exec/chenhanying/espnet/egs2/db4/tts6/dump/lpcnet_feat/org/tr_no_dev/text"
-mels_path = "/ssd4/exec/yins/work/vocoders/ParallelWaveGAN/egs/db4/dump/train_nodev/raw/dump.1" \
-    if mel_type == "mel" else "/ssd3/exec/yins/db4/biaobei_progressive/lpc_features"
-
-checkpoint_path = "checkpoints_db4_fa_mel_cbhg_splittoken_r2_small"
+phones_path = "phone_text.txt"
+checkpoint_path = "checkpoints"
 gta_path = os.path.join(checkpoint_path, "gta")
 
 
@@ -36,18 +30,18 @@ compression = ["log", "log10"][0]  # must be one of them
 ################################
 # Encoder Network parameters   #
 ################################
-split_tone = True
+split_tone = False
 num_chars = len(splittoken2index) if split_tone else len(alltoken2index)
 encoder_kernel_size=5
 encoder_n_convolutions=3
-encoder_embedding_dim=256
+encoder_embedding_dim=512
 tone_embedding = encoder_embedding_dim//8
 
 #############################################
 # Reference Encoder Network Hyperparameters #
 #############################################
-speaker_encoder_type = ["GST", "VAE", "GMVAE"][1]
-expressive_encoder_type = ["GST", "VAE", "GMVAE"][1]
+speaker_encoder_type = ["GST", "VAE", "GMVAE"][0]
+expressive_encoder_type = ["GST", "VAE", "GMVAE"][0]
 
 spk_ids = {"us": 0,
            "**": 1}
@@ -88,10 +82,10 @@ vae_size=32
 # Decoder Network parameters   #
 ################################
 feed_back_last=True
-n_mel_channels={"lpc": 20, "mel": 80}[mel_type]
+n_mel_channels=80
 n_frames_per_step=2
-decoder_rnn_dim=384
-prenet_dims=[256, 128]
+decoder_rnn_dim=512
+prenet_dims=[256, 256]
 gate_threshold=0.5
 max_decoder_steps=1000
 p_attention_dropout=0.1
@@ -101,12 +95,12 @@ p_decoder_dropout=0.1
 # Attention Network parameters  #
 #################################
 attention_mode=["GMM", "FAV2"][1]
-attention_rnn_dim=384
+attention_rnn_dim=512
 attention_dim=128
 
 # Location Layer parameters
 attention_location_n_filters=32
-attention_location_kernel_size=17
+attention_location_kernel_size=31
 
 # GMM parameters
 delta_bias=1.0
@@ -116,14 +110,14 @@ gmm_kernel=5
 ################################
 # Auxiliary Loss parameters    #
 ################################
-guided_sigma=0.4                # weight for guided attention loss. default 0.4
-pos_weight=10.0                 # BCEWithLogitsLoss pos_weight, default 10.0
+guided_sigma=0.2                # weight for guided attention loss. default 0.4
+pos_weight=15.0                 # BCEWithLogitsLoss pos_weight, default 10.0
 
 ################################
 # Mel-post Network parameters  #
 ################################
-postnet_embedding_dims=[256, 256, 256, 256]
-postnet_kernel_sizes=[3, 3, 5, 5]
+postnet_embedding_dims=[512, 512, 512, 512]
+postnet_kernel_sizes=[5, 5, 5, 5]
 p_postnet_dropout=0.5
 
 postnet_k=5

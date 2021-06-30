@@ -125,25 +125,6 @@ def dynamic_range_decompression_torch_exp(x):
     return torch.exp(x)
 
 
-# def mel_spectrogram_torch(y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin, fmax):
-#     global mel_basis, hann_window
-#     if fmax not in mel_basis:
-#         mel = librosa.filters.mel(sampling_rate, n_fft, num_mels, fmin, fmax)
-#         mel_basis[str(fmax)+'_'+str(y.device)] = torch.from_numpy(mel).float().to(y.device)
-#         hann_window[str(y.device)] = torch.hann_window(win_size).to(y.device)
-#
-#     y = y.squeeze(1)
-#     if is_pytorch_17plus:
-#         spec = torch.stft(y, n_fft, hop_length=hop_size, win_length=win_size, window=hann_window[str(y.device)], return_complex=False)
-#     else:
-#         spec = torch.stft(y, n_fft, hop_length=hop_size, win_length=win_size, window=hann_window[str(y.device)])
-#     spec = torch.sqrt(spec.pow(2).sum(-1) + 1e-5)
-#
-#     spec = torch.matmul(mel_basis[str(fmax)+'_'+str(y.device)], spec)
-#     spec = dynamic_range_compression_torch_log10(spec)
-#
-#     return spec
-
 def mel_spectrogram_torch(y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin, fmax, center=False, compression="log"):
     global mel_basis, hann_window
     if fmax not in mel_basis:
@@ -171,27 +152,3 @@ def mel_spectrogram_torch(y, n_fft, num_mels, sampling_rate, hop_size, win_size,
     else:
         raise ValueError("not supported compression type {}".format(compression))
     return spec
-
-
-def get_lpcnet_features(wav):
-    filepath, tempfilename = os.path.split(wav)
-    filename, extension = os.path.splitext(tempfilename)
-    os.system('sox ' + wav + ' -b 16 -c 1 -r 16k -t raw - > ./input_' + filename + '.s16')
-    os.system('./dump_data -test input_{}.s16 feature_{}.f32'.format(filename, filename))
-    fea = np.fromfile('feature_'+ filename +'.f32', dtype=np.float32).reshape(-1, 55)
-    new_fea = np.concatenate((fea[:,:18], fea[:,36:38]), -1)
-    os.system('rm input_{}.s16 feature_{}.f32'.format(filename, filename))
-    return new_fea, filename
-
-
-def process_lpcnet_features():
-    wav_path = hp.wav_path
-    save_path = hp.mels_path
-    wavs = glob.glob(f'{wav_path}/**/*.wav', recursive=True)
-    pool = Pool(processes=int(cpu_count() / 2))
-    for i, (feature, filename) in enumerate(pool.imap_unordered(get_lpcnet_features, wavs)):
-        message = f'{i}/{len(wavs)}'
-        np.save(os.path.join(save_path, filename + ".npy"), feature)
-        stream(message)
-
-    print()
