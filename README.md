@@ -18,8 +18,14 @@ The expressive Tacotron framework includes various deep learning architectures s
 - [x] [GMMv2 Attention](https://arxiv.org/pdf/1910.10288.pdf)
 - [ ] [Dynamic Convolution Attention](https://arxiv.org/pdf/1910.10288.pdf) (Todo)
 
+### Differences from Nvidia Tacotron
+- [x] More attention modes
+- [x] Reduction factor supported (Tacotron1)
+- [x] Feeding r-th features for reduction factor in Decoder (Tacotron1)
+- [x] Masked loss
+
 ## Training
-Single Tacotron2 with Forward Attention by defalut. If you want to train with expressive mode, you can reference [Expressive Tacotron](https://github.com/BridgetteSong/ExpressiveTacotron/blob/master/model_attention.py).
+Single Tacotron2 with Forward Attention by defalut(r=2). If you want to train with expressive mode, you can reference [Expressive Tacotron](https://github.com/BridgetteSong/ExpressiveTacotron/blob/master/model_attention.py).
 1. transfer texts to phones, and save as **"phones_path"** in **hparams.py** and change phone dictionary in **text.py**
 2. `python train.py` for single GPU
 3. `python -m multiproc train.py` for multi GPUs
