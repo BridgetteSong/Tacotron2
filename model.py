@@ -225,7 +225,7 @@ class GMMAttention(nn.Module):
         sigma = F.softplus(sigma_hat).unsqueeze(2) # [B, k, 1]
         current_mu = prev_mu + delta
         z = math.sqrt(2*math.pi) * sigma  # [B, k, 1]
-	    log_energies = -torch.log(z) - 0.5 * (memory_time - current_mu)**2 / sigma**2  # [B, K, N]
+	log_energies = -torch.log(z) - 0.5 * (memory_time - current_mu)**2 / sigma**2  # [B, K, N]
         if mask is not None:
             log_energies.masked_fill_(mask.unsqueeze(1), -float(1e10))
         energies = w * F.softmax(log_energies, dim=-1)  # [B, K, N]
