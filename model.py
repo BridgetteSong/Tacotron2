@@ -230,7 +230,7 @@ class GMMAttention(nn.Module):
             log_energies.masked_fill_(mask.unsqueeze(1), -float(1e10))
         energies = w * F.softmax(log_energies, dim=-1)  # [B, K, N]
         alignments = torch.sum(energies, dim=1, keepdim=True)  # [B, 1, N]
-        attention_context = torch.bmm(alignments.unsqueeze(1), memory)
+        attention_context = torch.bmm(alignments, memory)
         attention_context = attention_context.squeeze(1)
         return attention_context, alignments, current_mu
 
