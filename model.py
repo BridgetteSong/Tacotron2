@@ -224,11 +224,12 @@ class GMMAttention(nn.Module):
         delta = F.softplus(delta_hat).unsqueeze(2) # [B, k, 1]
         sigma = F.softplus(sigma_hat).unsqueeze(2) # [B, k, 1]
         current_mu = prev_mu + delta
-        z = 2.50662827 * sigma  # [B, k, 1] sqrt(2*pi) = 2.50662827
-        energies = w / z * torch.exp(-0.5 * torch.pow((memory_time - current_mu)/sigma, 2))
-        alignments = torch.sum(energies, dim=1)  # [B, N]
+        z = math.sqrt(2*math.pi) * sigma  # [B, k, 1]
+	    log_energies = -torch.log(z) - 0.5 * (memory_time - current_mu)**2 / sigma**2  # [B, K, N]
         if mask is not None:
-            alignments.masked_fill_(mask, 0.0)
+            log_energies.masked_fill_(mask.unsqueeze(1), -float(1e10))
+        energies = w * F.softmax(log_energies, dim=-1)  # [B, K, N]
+        alignments = torch.sum(energies, dim=1, keepdim=True)  # [B, 1, N]
         attention_context = torch.bmm(alignments.unsqueeze(1), memory)
         attention_context = attention_context.squeeze(1)
         return attention_context, alignments, current_mu
